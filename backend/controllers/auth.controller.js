@@ -20,7 +20,7 @@ export const register = async(req,res)=>{
         const mpfp=`https://avatar.iran.liara.run/public/boy?username=${username}`;
         const gpfp=`https://avatar.iran.liara.run/public/girl?username=${username}`;
         const pfp=gender==='Male'?mpfp:gpfp;
-        const profilePic = req.file ? req.file.path :pfp;
+        const profilePic = req.file ? `/uploads/${req.file.filename}` : pfp;
         const newUser = new User({fullName, username, password:hashedPassword,gender,profilePic});
         if(newUser){
             generateTokenAndSetCookie(newUser._id,res);
@@ -65,13 +65,13 @@ export const login = async(req,res)=>{
     }
 }
 
-export const logout = (req,res)=>{
-    try{
-        res.cookie("jwt","",{maxAge:0});
-        res.status(200).json({error:"Logged Out successfully"});
-    }
-    catch(err){
-        console.log("Error in Logout controller",err.message);
-        res.status(500).json({error:"Internal server error"});
-    }
-}
+export const logout = (req, res) => {
+	try {
+		res.cookie("jwt", "", { maxAge: 0 });
+		res.status(200).json({ message: "Logged out successfully" });
+	} 
+    catch (error) {
+		console.log("Error in logout controller", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+};

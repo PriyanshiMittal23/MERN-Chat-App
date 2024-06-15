@@ -1,5 +1,6 @@
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
+import { getRecieverSocketId, io} from '../socket/socketio.js';
 
 export const sendMessage = async(req,res)=>{
     try {
@@ -16,7 +17,7 @@ export const sendMessage = async(req,res)=>{
             })
         }
 
-        const newMessage = await Message({senderId,recieverId,message});
+        const newMessage = new Message({senderId,recieverId,message});
         if(newMessage){
             conversation.messages.push(newMessage._id);
         }
@@ -26,7 +27,15 @@ export const sendMessage = async(req,res)=>{
         // this will run in parallel, so it will take less time
         await Promise.all([conversation.save(),newMessage.save()]);
 
-        res.status(201).json({newMessage});
+        // sending it to the reciever
+        // SOCKET.IO functionality
+        const recieverSocketId = getRecieverSocketId(recieverId);
+        if(recieverSocketId){
+            // sending event to a particular user
+            io.to(recieverSocketId).emit("newMessage",newMessage);
+        }
+
+        res.status(201).json(newMessage);
     } 
     catch (err) {
         console.log("Error in sendMessage Controller",err.message);
@@ -44,11 +53,12 @@ export const getMessages = async(req,res)=>{
             participants:{$all: [senderId, userToChat]}
         }).populate("messages");
 
-        if(!conversation){
-            res.status(200).json([]);
+        if(!conversation || !conversation.messages){
+            return res.status(200).json([]);
         }
+        const messages = conversation.messages;
 
-        res.status(200).json(conversation.messages);
+        res.status(200).json(messages);
 
     } catch (err) {
         console.log("Error in getMessages Controller",err.message);
